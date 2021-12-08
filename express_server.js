@@ -38,8 +38,14 @@ const generateRandomString = function() {
   return result;
 };
 
-
-
+const emailLookup = function(email) {
+  for (const key in users) {
+    if (users[key].email === email) {
+      return true;
+    }
+  }
+  return false;
+};
 // helper functions end
 
 // routes
@@ -98,6 +104,8 @@ app.post("/register", (req, res) => {
   const id = generateRandomString();
   if (!email || !password) {
     res.status(400).send("Email or password fields cannot be blank");
+  } else if (emailLookup(email)) {
+    res.status(400).send("Account with that email already exists");
   } else {
     users[id] = {id, email, password};
     res.cookie("user_id", id);
