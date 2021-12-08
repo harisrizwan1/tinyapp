@@ -56,6 +56,12 @@ app.get("/urls/:shortURL", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
+// request handler for updating urls
+app.post("/urls/:shortURL", (req, res) => {
+  urlDatabase[req.params.shortURL] = req.body.longURL;
+  res.redirect("/urls");
+});
+
 // request handler for deleting links from database
 app.post("/urls/:shortURL/delete", (req, res) => {
   const linkToDelete = req.params.shortURL;
