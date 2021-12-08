@@ -21,34 +21,46 @@ const generateRandoString = function() {
   return result;
 };
 
+// redirects to homepage /urls
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.redirect('/urls');
 });
 
+// homepage
 app.get("/urls", (req, res) => {
   const templateVars = {urls: urlDatabase};
   res.render("urls_index", templateVars);
 });
 
+// reuest handler for adding new links to database
+app.post("/urls", (req, res) => {
+  const currentURL = generateRandoString();
+  urlDatabase[currentURL] = req.body.longURL;
+  res.redirect(`/urls/${currentURL}`);
+});
+
+// page for creating new links
 app.get("/urls/new", (req, res) => {
   res.render("urls_new");
 });
 
-app.post("/urls", (req, res) => {
-  const currentURL = generateRandoString();
-  urlDatabase[currentURL] = req.body.longURL;
-  console.log(urlDatabase);
-  res.redirect(`/urls/${currentURL}`);
-});
-
+// request handler for redirecting to actual link
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
 });
 
+// page for viewing a single url
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
   res.render("urls_show", templateVars);
+});
+
+// request handler for deleting links from database
+app.post("/urls/:shortURL/delete", (req, res) => {
+  const linkToDelete = req.params.shortURL;
+  delete urlDatabase[linkToDelete];
+  res.redirect("/urls");
 });
 
 app.listen(PORT, () => {
