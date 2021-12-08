@@ -7,13 +7,28 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 app.set("view engine", "ejs");
 
-
+// data
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
 
-const generateRandoString = function() {
+const users = {
+  "userRandomID": {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur"
+  },
+  "user2RandomID": {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk"
+  }
+};
+// data ends
+
+// helper functions
+const generateRandomString = function() {
   let result = '';
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const reqLength = 6;
@@ -22,6 +37,12 @@ const generateRandoString = function() {
   }
   return result;
 };
+
+
+
+// helper functions end
+
+// routes
 
 // redirects to homepage /urls
 app.get("/", (req, res) => {
@@ -36,50 +57,67 @@ app.post("/login", (req, res) => {
 
 // logout handler
 app.post("/logout", (req, res) => {
-  res.clearCookie("username");
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
 // homepage
 app.get("/urls", (req, res) => {
-  const templateVars = {urls: urlDatabase, username: req.cookies["username"]};
+  const user = users[req.cookies.user_id];
+  const templateVars = {urls: urlDatabase, user};
   res.render("urls_index", templateVars);
 });
 
 // register page
 app.get("/register", (req, res) => {
-  const templateVars = {username: req.cookies["username"]};
+  const user = users[req.cookies.user_id];
+  const templateVars = {user};
   res.render("urls_register", templateVars);
-});
-
-// reuest handler for adding new links to database
-app.post("/urls", (req, res) => {
-  const currentURL = generateRandoString();
-  urlDatabase[currentURL] = req.body.longURL;
-  const templateVars = {username: req.cookies["username"]};
-  res.redirect(`/urls/${currentURL}`, templateVars);
 });
 
 // page for creating new links
 app.get("/urls/new", (req, res) => {
-  const templateVars = {username: req.cookies["username"]};
+  const user = users[req.cookies.user_id];
+  const templateVars = {user};
   res.render("urls_new", templateVars);
+});
+
+// page for viewing a single url
+app.get("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[req.params.shortURL];
+  const user = users[req.cookies.user_id];
+  const templateVars = {shortURL, longURL, user};
+  res.render("urls_show", templateVars);
+});
+
+// request handler for registration
+app.post("/register", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+  const id = generateRandomString();
+  if (!email || !password) {
+    res.status(400).send("Email or password fields cannot be blank");
+  } else {
+    users[id] = {id, email, password};
+    res.cookie("user_id", id);
+    res.redirect("/urls");
+  }
+});
+
+// reuest handler for adding new links to database
+app.post("/urls", (req, res) => {
+  const currentURL = generateRandomString();
+  urlDatabase[currentURL] = req.body.longURL;
+  const user = user[req.cookies.user_id];
+  const templateVars = {user};
+  res.redirect(`/urls/${currentURL}`, templateVars);
 });
 
 // request handler for redirecting to actual link
 app.get("/u/:shortURL", (req, res) => {
   const longURL = urlDatabase[req.params.shortURL];
   res.redirect(longURL);
-});
-
-// page for viewing a single url
-app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = {
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL],
-    username: req.cookies["username"]
-  };
-  res.render("urls_show", templateVars);
 });
 
 // request handler for updating urls
@@ -95,6 +133,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect("/urls");
 });
 
+// start server
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}`);
 });
