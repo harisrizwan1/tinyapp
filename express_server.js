@@ -46,6 +46,12 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+// register page
+app.get("/register", (req, res) => {
+  const templateVars = {username: req.cookies["username"]};
+  res.render("urls_register", templateVars);
+});
+
 // reuest handler for adding new links to database
 app.post("/urls", (req, res) => {
   const currentURL = generateRandoString();
