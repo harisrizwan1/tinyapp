@@ -3,6 +3,7 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const e = require("express");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 app.set("view engine", "ejs");
@@ -41,7 +42,7 @@ const generateRandomString = function() {
 const emailLookup = function(email) {
   for (const key in users) {
     if (users[key].email === email) {
-      return true;
+      return users[key];
     }
   }
   return false;
@@ -53,18 +54,6 @@ const emailLookup = function(email) {
 // redirects to homepage /urls
 app.get("/", (req, res) => {
   res.redirect('/urls');
-});
-
-// login handler
-app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username);
-  res.redirect('/urls');
-});
-
-// logout handler
-app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
-  res.redirect("/urls");
 });
 
 // homepage
@@ -117,6 +106,33 @@ app.post("/register", (req, res) => {
   }
   users[id] = {id, email, password};
   res.cookie("user_id", id);
+  res.redirect("/urls");
+});
+
+// login handler
+app.post("/login", (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
+
+  // check if email is in database
+  if (!emailLookup(email)) {
+    return res.status(403).send("E-mail cannot be found. Please try again.");
+  }
+
+  const user = emailLookup(email);
+  const id = user.id;
+
+  if (user.password !== password) {
+    return res.status(403).send("Wrong password. Please try again.");
+  }
+
+  res.cookie("user_id", id);
+  res.redirect('/urls');
+});
+
+// logout handler
+app.post("/logout", (req, res) => {
+  res.clearCookie("user_id");
   res.redirect("/urls");
 });
 
