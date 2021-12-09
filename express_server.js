@@ -75,12 +75,16 @@ const urlsForUser = function(user) {
 
 // redirects to homepage /urls
 app.get("/", (req, res) => {
-  res.redirect('/urls');
+  if (req.session.userID) {
+    return res.redirect("/urls");
+  } else {
+    return res.redirect("/login");
+  }
 });
 
 // homepage
 app.get("/urls", (req, res) => {
-  const cookie = req.session.user_id;
+  const cookie = req.session.userID;
   const urls = urlsForUser(cookie);
   const user = users[cookie];
   const templateVars = {urls, user};
@@ -89,21 +93,21 @@ app.get("/urls", (req, res) => {
 
 // register page
 app.get("/register", (req, res) => {
-  const user = users[req.session.user_id];
+  const user = users[req.session.userID];
   const templateVars = {user};
   res.render("urls_register", templateVars);
 });
 
 // login page
 app.get("/login", (req, res) => {
-  const user = users[req.session.user_id];
+  const user = users[req.session.userID];
   const templateVars = {user};
   res.render("urls_login", templateVars);
 });
 
 // page for creating new links
 app.get("/urls/new", (req, res) => {
-  const user = users[req.session.user_id];
+  const user = users[req.session.userID];
   const templateVars = {user};
   res.render("urls_new", templateVars);
 });
@@ -112,7 +116,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL].longURL;
-  const cookie = req.session.user_id;
+  const cookie = req.session.userID;
 
   // check if the url belongs to the user
   if (cookie !== urlDatabase[shortURL].userID) {
@@ -136,7 +140,7 @@ app.post("/register", (req, res) => {
     return res.status(400).send("An account with that email already exists");
   }
   users[id] = {id, email, password};
-  req.session.user_id = id;
+  req.session.userID = id;
   res.redirect("/urls");
 });
 
@@ -157,7 +161,7 @@ app.post("/login", (req, res) => {
     return res.status(403).send("Wrong password. Please try again.");
   }
 
-  req.session.user_id = id;
+  req.session.userID = id;
   res.redirect('/urls');
 });
 
@@ -169,12 +173,12 @@ app.post("/logout", (req, res) => {
 
 // reuest handler for adding new links to database
 app.post("/urls", (req, res) => {
-  if (!req.session.user_id) {
+  if (!req.session.userID) {
     return res.redirect("/urls");
   }
   const currentURL = generateRandomString();
   urlDatabase[currentURL] = req.body.longURL;
-  const user = user[req.session.user_id];
+  const user = user[req.session.userID];
   const templateVars = {user};
   res.redirect(`/urls/${currentURL}`, templateVars);
 });
@@ -193,7 +197,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 // request handler for updating urls
 app.post("/urls/:shortURL", (req, res) => {
-  const cookie = req.session.user_id;
+  const cookie = req.session.userID;
   const shortURL = req.params.shortURL;
 
   // check if the url belongs to the user
