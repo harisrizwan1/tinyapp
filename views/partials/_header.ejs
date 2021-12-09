@@ -17,9 +17,11 @@
           <button type="submit" class="btn btn-outline-dark">Logout</button>
         </form>
       <% } else { %>
-        <form class="nav-item nav-link" method="POST" action="/login">
-          <input id="username" type="text" placeholder="Username" name="username" />
+        <form class="nav-item nav-link" method="GET" action="/login">
           <button type="submit" class="btn btn-outline-dark">Login</button>
+        </form>
+        <form class="nav-item nav-link" method="GET" action="/register">
+          <button type="submit" class="btn btn-outline-dark">Register</button>
         </form>
       <% } %>
     </div>

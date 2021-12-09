@@ -81,6 +81,13 @@ app.get("/register", (req, res) => {
   res.render("urls_register", templateVars);
 });
 
+// login page
+app.get("/login", (req, res) => {
+  const user = users[req.cookies.user_id];
+  const templateVars = {user};
+  res.render("urls_login", templateVars);
+});
+
 // page for creating new links
 app.get("/urls/new", (req, res) => {
   const user = users[req.cookies.user_id];
@@ -103,14 +110,14 @@ app.post("/register", (req, res) => {
   const password = req.body.password;
   const id = generateRandomString();
   if (!email || !password) {
-    res.status(400).send("Email or password fields cannot be blank");
-  } else if (emailLookup(email)) {
-    res.status(400).send("Account with that email already exists");
-  } else {
-    users[id] = {id, email, password};
-    res.cookie("user_id", id);
-    res.redirect("/urls");
+    return res.status(400).send("Email or password fields cannot be blank");
   }
+  if (emailLookup(email)) {
+    return res.status(400).send("An account with that email already exists");
+  }
+  users[id] = {id, email, password};
+  res.cookie("user_id", id);
+  res.redirect("/urls");
 });
 
 // reuest handler for adding new links to database
