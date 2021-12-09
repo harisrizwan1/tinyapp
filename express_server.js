@@ -2,6 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
 const bcrypt = require('bcryptjs');
+const {generateRandomString, emailLookup, urlsForUser} = require("./helpers.js");
 const app = express();
 const PORT = 8080;
 app.use(bodyParser.urlencoded({extended: true}));
@@ -40,40 +41,9 @@ const users = {
 };
 // data ends
 
-// helper functions
-const generateRandomString = function() {
-  let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const reqLength = 6;
-  for (let i = 0; i < reqLength; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-};
-
-const emailLookup = function(email) {
-  for (const key in users) {
-    if (users[key].email === email) {
-      return users[key];
-    }
-  }
-  return false;
-};
-
-const urlsForUser = function(user) {
-  const result = {};
-  for (const key in urlDatabase) {
-    if (urlDatabase[key].userID === user) {
-      result[key] = urlDatabase[key];
-    }
-  }
-  return result;
-};
-// helper functions end
-
 // routes
 
-// redirects to homepage /urls
+// redirects to homepage /urls or /login
 app.get("/", (req, res) => {
   if (req.session.userID) {
     return res.redirect("/urls");
@@ -85,7 +55,7 @@ app.get("/", (req, res) => {
 // homepage
 app.get("/urls", (req, res) => {
   const cookie = req.session.userID;
-  const urls = urlsForUser(cookie);
+  const urls = urlsForUser(cookie, urlDatabase);
   const user = users[cookie];
   const templateVars = {urls, user};
   res.render("urls_index", templateVars);
@@ -136,7 +106,7 @@ app.post("/register", (req, res) => {
   if (!email || !password) {
     return res.status(400).send("Email or password fields cannot be blank");
   }
-  if (emailLookup(email)) {
+  if (emailLookup(email, users)) {
     return res.status(400).send("An account with that email already exists");
   }
   users[id] = {id, email, password};
@@ -150,11 +120,11 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
 
   // check if email is in database
-  if (!emailLookup(email)) {
+  if (!emailLookup(email, users)) {
     return res.status(403).send("E-mail cannot be found. Please try again.");
   }
 
-  const user = emailLookup(email);
+  const user = emailLookup(email, users);
   const id = user.id;
 
   if (!bcrypt.compareSync(password, user.password)) {
@@ -177,10 +147,13 @@ app.post("/urls", (req, res) => {
     return res.redirect("/urls");
   }
   const currentURL = generateRandomString();
-  urlDatabase[currentURL] = req.body.longURL;
-  const user = user[req.session.userID];
-  const templateVars = {user};
-  res.redirect(`/urls/${currentURL}`, templateVars);
+  const longURL =  req.body.longURL;
+  const cookie = req.session.userID;
+  urlDatabase[currentURL] = {
+    longURL,
+    cookie
+  };
+  res.redirect(`/urls/${currentURL}`);
 });
 
 // request handler for redirecting to actual link
