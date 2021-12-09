@@ -54,7 +54,7 @@ const emailLookup = function(email) {
   return false;
 };
 
-const myURL = function(user) {
+const urlsForUser = function(user) {
   const result = {};
   for (const key in urlDatabase) {
     if (urlDatabase[key].userID === user) {
@@ -75,7 +75,7 @@ app.get("/", (req, res) => {
 // homepage
 app.get("/urls", (req, res) => {
   const cookie = req.cookies.user_id;
-  const urls = myURL(cookie);
+  const urls = urlsForUser(cookie);
   const user = users[cookie];
   const templateVars = {urls, user};
   res.render("urls_index", templateVars);
