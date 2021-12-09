@@ -10,15 +10,21 @@ app.set("view engine", "ejs");
 
 // data
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW"
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW"
+  }
 };
 
 const users = {
-  "userRandomID": {
-    id: "userRandomID",
+  "aJ48lW": {
+    id: "aJ48lW",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: "123"
   },
   "user2RandomID": {
     id: "user2RandomID",
@@ -47,6 +53,16 @@ const emailLookup = function(email) {
   }
   return false;
 };
+
+const myURL = function(user) {
+  const result = {};
+  for (const key in urlDatabase) {
+    if (urlDatabase[key].userID === user) {
+      result[key] = urlDatabase[key];
+    }
+  }
+  return result;
+};
 // helper functions end
 
 // routes
@@ -58,8 +74,10 @@ app.get("/", (req, res) => {
 
 // homepage
 app.get("/urls", (req, res) => {
-  const user = users[req.cookies.user_id];
-  const templateVars = {urls: urlDatabase, user};
+  const cookie = req.cookies.user_id;
+  const urls = myURL(cookie);
+  const user = users[cookie];
+  const templateVars = {urls, user};
   res.render("urls_index", templateVars);
 });
 
@@ -87,8 +105,15 @@ app.get("/urls/new", (req, res) => {
 // page for viewing a single url
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[req.params.shortURL];
-  const user = users[req.cookies.user_id];
+  const longURL = urlDatabase[shortURL].longURL;
+  const cookie = req.cookies.user_id;
+
+  // check if the url belongs to the user
+  if (cookie !== urlDatabase[shortURL].userID) {
+    return res.status(400).send("Not your URL");
+  }
+
+  const user = users[cookie];
   const templateVars = {shortURL, longURL, user};
   res.render("urls_show", templateVars);
 });
@@ -138,6 +163,9 @@ app.post("/logout", (req, res) => {
 
 // reuest handler for adding new links to database
 app.post("/urls", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.redirect("/urls");
+  }
   const currentURL = generateRandomString();
   urlDatabase[currentURL] = req.body.longURL;
   const user = user[req.cookies.user_id];
@@ -147,13 +175,27 @@ app.post("/urls", (req, res) => {
 
 // request handler for redirecting to actual link
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  const shortURL = req.params.shortURL;
+
+  // check if it is a valid shortURL
+  if (!(shortURL in urlDatabase)) {
+    return res.status(400).send("Not a valid url");
+  }
+  const longURL = urlDatabase[shortURL].longURL;
   res.redirect(longURL);
 });
 
 // request handler for updating urls
 app.post("/urls/:shortURL", (req, res) => {
-  urlDatabase[req.params.shortURL] = req.body.longURL;
+  const cookie = req.cookies.user_id;
+  const shortURL = req.params.shortURL;
+
+  // check if the url belongs to the user
+  if (cookie !== urlDatabase[shortURL].userID) {
+    return res.status(400).send("Not your URL");
+  }
+
+  urlDatabase[shortURL].longURL = req.body.longURL;
   res.redirect("/urls");
 });
 
