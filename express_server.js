@@ -3,7 +3,7 @@ const app = express();
 const PORT = 8080;
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const e = require("express");
+const bcrypt = require('bcryptjs');
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser());
 app.set("view engine", "ejs");
@@ -121,7 +121,7 @@ app.get("/urls/:shortURL", (req, res) => {
 // request handler for registration
 app.post("/register", (req, res) => {
   const email = req.body.email;
-  const password = req.body.password;
+  const password = bcrypt.hashSync(req.body.password, 10);
   const id = generateRandomString();
   if (!email || !password) {
     return res.status(400).send("Email or password fields cannot be blank");
@@ -147,7 +147,7 @@ app.post("/login", (req, res) => {
   const user = emailLookup(email);
   const id = user.id;
 
-  if (user.password !== password) {
+  if (!bcrypt.compareSync(password, user.password)) {
     return res.status(403).send("Wrong password. Please try again.");
   }
 
