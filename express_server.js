@@ -2,7 +2,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
 const bcrypt = require('bcryptjs');
-const {generateRandomString, emailLookup, urlsForUser} = require("./helpers.js");
+const {generateRandomString, getUserByEmail, urlsForUser} = require("./helpers.js");
 const app = express();
 const PORT = 8080;
 app.use(bodyParser.urlencoded({extended: true}));
@@ -106,7 +106,7 @@ app.post("/register", (req, res) => {
   if (!email || !password) {
     return res.status(400).send("Email or password fields cannot be blank");
   }
-  if (emailLookup(email, users)) {
+  if (getUserByEmail(email, users)) {
     return res.status(400).send("An account with that email already exists");
   }
   users[id] = {id, email, password};
@@ -120,11 +120,11 @@ app.post("/login", (req, res) => {
   const password = req.body.password;
 
   // check if email is in database
-  if (!emailLookup(email, users)) {
+  if (!getUserByEmail(email, users)) {
     return res.status(403).send("E-mail cannot be found. Please try again.");
   }
 
-  const user = emailLookup(email, users);
+  const user = getUserByEmail(email, users);
   const id = user.id;
 
   if (!bcrypt.compareSync(password, user.password)) {
@@ -137,7 +137,7 @@ app.post("/login", (req, res) => {
 
 // logout handler
 app.post("/logout", (req, res) => {
-  req.session = null;
+  req.session.userID = null;
   res.redirect("/urls");
 });
 

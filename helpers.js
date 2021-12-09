@@ -8,13 +8,13 @@ const generateRandomString = function() {
   return result;
 };
 
-const emailLookup = function(email, users) {
+const getUserByEmail = function(email, users) {
   for (const key in users) {
     if (users[key].email === email) {
       return users[key];
     }
   }
-  return false;
+  return undefined;
 };
 
 const urlsForUser = function(user, data) {
@@ -27,4 +27,4 @@ const urlsForUser = function(user, data) {
   return result;
 };
 
-module.exports = {generateRandomString, emailLookup, urlsForUser};
+module.exports = {generateRandomString, getUserByEmail, urlsForUser};
