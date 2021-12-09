@@ -1,11 +1,17 @@
 const express = require("express");
+const bodyParser = require("body-parser");
+const cookieSession = require("cookie-session");
+const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 8080;
-const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
-const bcrypt = require('bcryptjs');
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+
+  // Cookie Options
+  maxAge: 24 * 60 * 60 * 1000 // 24 hours
+}));
 app.set("view engine", "ejs");
 
 // data
@@ -74,7 +80,7 @@ app.get("/", (req, res) => {
 
 // homepage
 app.get("/urls", (req, res) => {
-  const cookie = req.cookies.user_id;
+  const cookie = req.session.user_id;
   const urls = urlsForUser(cookie);
   const user = users[cookie];
   const templateVars = {urls, user};
@@ -83,21 +89,21 @@ app.get("/urls", (req, res) => {
 
 // register page
 app.get("/register", (req, res) => {
-  const user = users[req.cookies.user_id];
+  const user = users[req.session.user_id];
   const templateVars = {user};
   res.render("urls_register", templateVars);
 });
 
 // login page
 app.get("/login", (req, res) => {
-  const user = users[req.cookies.user_id];
+  const user = users[req.session.user_id];
   const templateVars = {user};
   res.render("urls_login", templateVars);
 });
 
 // page for creating new links
 app.get("/urls/new", (req, res) => {
-  const user = users[req.cookies.user_id];
+  const user = users[req.session.user_id];
   const templateVars = {user};
   res.render("urls_new", templateVars);
 });
@@ -106,7 +112,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL].longURL;
-  const cookie = req.cookies.user_id;
+  const cookie = req.session.user_id;
 
   // check if the url belongs to the user
   if (cookie !== urlDatabase[shortURL].userID) {
@@ -130,7 +136,7 @@ app.post("/register", (req, res) => {
     return res.status(400).send("An account with that email already exists");
   }
   users[id] = {id, email, password};
-  res.cookie("user_id", id);
+  req.session.user_id = id;
   res.redirect("/urls");
 });
 
@@ -151,24 +157,24 @@ app.post("/login", (req, res) => {
     return res.status(403).send("Wrong password. Please try again.");
   }
 
-  res.cookie("user_id", id);
+  req.session.user_id = id;
   res.redirect('/urls');
 });
 
 // logout handler
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/urls");
 });
 
 // reuest handler for adding new links to database
 app.post("/urls", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.redirect("/urls");
   }
   const currentURL = generateRandomString();
   urlDatabase[currentURL] = req.body.longURL;
-  const user = user[req.cookies.user_id];
+  const user = user[req.session.user_id];
   const templateVars = {user};
   res.redirect(`/urls/${currentURL}`, templateVars);
 });
@@ -187,7 +193,7 @@ app.get("/u/:shortURL", (req, res) => {
 
 // request handler for updating urls
 app.post("/urls/:shortURL", (req, res) => {
-  const cookie = req.cookies.user_id;
+  const cookie = req.session.user_id;
   const shortURL = req.params.shortURL;
 
   // check if the url belongs to the user
