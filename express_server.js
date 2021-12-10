@@ -188,7 +188,6 @@ app.get("/u/:shortURL", (req, res) => {
 
   // check if it is a unique visitor
   if (!req.session.visited) {
-    console.log("check1");
     urlDatabase[shortURL].uniqueVisits++;
     req.session.visited = [shortURL];
   } else if (!req.session.visited.includes(shortURL)) {
