@@ -2,15 +2,16 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieSession = require("cookie-session");
 const bcrypt = require('bcryptjs');
-const {generateRandomString, getUserByEmail, urlsForUser} = require("./helpers.js");
+let methodOverride = require('method-override');
+const {generateRandomString, getUserByEmail, urlsForUser, isLoggedIn} = require("./helpers.js");
+
 const app = express();
 const PORT = 8080;
 app.use(bodyParser.urlencoded({extended: true}));
+app.use(methodOverride('_method'));
 app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2'],
-
-  // Cookie Options
   maxAge: 24 * 60 * 60 * 1000 // 24 hours
 }));
 app.set("view engine", "ejs");
@@ -19,24 +20,28 @@ app.set("view engine", "ejs");
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
-    userID: "aJ48lW"
+    userID: "aJ48lW",
+    createdOn: 1639110054 * 1000,
+    visits: [
+      {
+        time: 1639110074 * 1000,
+        id: "someID"
+      }
+    ],
+    uniqueVisits: 1,
   },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW"
-  }
 };
 
 const users = {
   "aJ48lW": {
     id: "aJ48lW",
     email: "user@example.com",
-    password: "123"
+    password: bcrypt.hashSync("123", 10),
   },
   "user2RandomID": {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: bcrypt.hashSync("dishwasher", 10),
   }
 };
 // data ends
@@ -55,6 +60,9 @@ app.get("/", (req, res) => {
 // homepage
 app.get("/urls", (req, res) => {
   const cookie = req.session.userID;
+  if (!isLoggedIn(cookie, users)) {
+    return res.redirect("/login");
+  }
   const urls = urlsForUser(cookie, urlDatabase);
   const user = users[cookie];
   const templateVars = {urls, user};
@@ -77,6 +85,10 @@ app.get("/login", (req, res) => {
 
 // page for creating new links
 app.get("/urls/new", (req, res) => {
+  const cookie = req.session.userID;
+  if (!isLoggedIn(cookie, users)) {
+    return res.redirect("/login");
+  }
   const user = users[req.session.userID];
   const templateVars = {user};
   res.render("urls_new", templateVars);
@@ -86,6 +98,8 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const shortURL = req.params.shortURL;
   const longURL = urlDatabase[shortURL].longURL;
+  const visits = urlDatabase[shortURL].visits;
+  const uniqueVisits = urlDatabase[shortURL].uniqueVisits;
   const cookie = req.session.userID;
 
   // check if the url belongs to the user
@@ -94,7 +108,7 @@ app.get("/urls/:shortURL", (req, res) => {
   }
 
   const user = users[cookie];
-  const templateVars = {shortURL, longURL, user};
+  const templateVars = {shortURL, longURL, user, visits, uniqueVisits};
   res.render("urls_show", templateVars);
 });
 
@@ -137,21 +151,28 @@ app.post("/login", (req, res) => {
 
 // logout handler
 app.post("/logout", (req, res) => {
-  req.session.userID = null;
+  req.session = null;
   res.redirect("/urls");
 });
 
 // reuest handler for adding new links to database
 app.post("/urls", (req, res) => {
-  if (!req.session.userID) {
+  const cookie = req.session.userID;
+  if (!isLoggedIn(cookie, users)) {
     return res.redirect("/urls");
   }
   const currentURL = generateRandomString();
   const longURL =  req.body.longURL;
-  const cookie = req.session.userID;
+  const userID = req.session.userID;
+  const visits = [];
+  const uniqueVisits = 0;
+  const createdOn = Date.now();
   urlDatabase[currentURL] = {
     longURL,
-    cookie
+    userID,
+    createdOn,
+    visits,
+    uniqueVisits,
   };
   res.redirect(`/urls/${currentURL}`);
 });
@@ -164,12 +185,27 @@ app.get("/u/:shortURL", (req, res) => {
   if (!(shortURL in urlDatabase)) {
     return res.status(400).send("Not a valid url");
   }
+
+  // check if it is a unique visitor
+  if (!req.session.visited) {
+    console.log("check1");
+    urlDatabase[shortURL].uniqueVisits++;
+    req.session.visited = [shortURL];
+  } else if (!req.session.visited.includes(shortURL)) {
+    urlDatabase[shortURL].uniqueVisits++;
+    req.session.visited.push(shortURL);
+  }
+
   const longURL = urlDatabase[shortURL].longURL;
+  urlDatabase[shortURL].visits.push({
+    time: Date.now(),
+    id: generateRandomString()
+  });
   res.redirect(longURL);
 });
 
 // request handler for updating urls
-app.post("/urls/:shortURL", (req, res) => {
+app.put("/urls/:shortURL", (req, res) => {
   const cookie = req.session.userID;
   const shortURL = req.params.shortURL;
 
@@ -183,7 +219,15 @@ app.post("/urls/:shortURL", (req, res) => {
 });
 
 // request handler for deleting links from database
-app.post("/urls/:shortURL/delete", (req, res) => {
+app.delete("/urls/:shortURL/delete", (req, res) => {
+  const cookie = req.session.userID;
+  const shortURL = req.params.shortURL;
+
+  // check if the url belongs to the user
+  if (cookie !== urlDatabase[shortURL].userID) {
+    return res.status(400).send("Not your URL");
+  }
+
   const linkToDelete = req.params.shortURL;
   delete urlDatabase[linkToDelete];
   res.redirect("/urls");

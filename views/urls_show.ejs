@@ -13,15 +13,24 @@
       <div class="card-body">
         <h5 class="card-title">TinyURL for: <%= longURL %></h5>
         <p class="card-text">Short URL: <a href="/u/<%= shortURL %>"><%= shortURL %></a></p>
+        <p class="card-text">Visits: <%= visits.length %></p>
+        <p class="card-text">Unique Visits: <%= uniqueVisits %></p>
       </div>
       <div class="card-header"></div>
       <div class="card-body">
         <h5 class="card-title">Edit</h5>
-        <form method="POST" action="/urls/<%= shortURL %>">
+        <form method="POST" action="/urls/<%= shortURL %>?_method=PUT">
           <label for="longURL">New URL: </label>
           <input id="longURL" type="text" name="longURL" />
           <button type="submit" class="btn btn-primary">Submit</button>
         </form>
+      </div>
+      <div class="card-header"></div>
+      <div class="card-body">
+        <h5 class="card-title">Visits to this link:</h5>
+        <% for (visit of visits) { %>
+        <p class="card-text"><%= visit.id %>: <%= new Date(visit.time).toLocaleString('en-CA') %></p>
+        <% } %>
       </div>
     <div class="card-footer text-muted"></div>
     

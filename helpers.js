@@ -27,4 +27,13 @@ const urlsForUser = function(user, data) {
   return result;
 };
 
-module.exports = {generateRandomString, getUserByEmail, urlsForUser};
+const isLoggedIn = function(cookie, data) {
+  for (const key in data) {
+    if (cookie === key) {
+      return true;
+    }
+  }
+  return false;
+};
+
+module.exports = {generateRandomString, getUserByEmail, urlsForUser, isLoggedIn};
