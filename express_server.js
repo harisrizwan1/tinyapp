@@ -71,6 +71,10 @@ app.get("/urls", (req, res) => {
 
 // register page
 app.get("/register", (req, res) => {
+  const cookie = req.session.userID;
+  if (isLoggedIn(cookie, users)) {
+    return res.redirect("/urls");
+  }
   const user = users[req.session.userID];
   const templateVars = {user};
   res.render("urls_register", templateVars);
@@ -78,6 +82,10 @@ app.get("/register", (req, res) => {
 
 // login page
 app.get("/login", (req, res) => {
+  const cookie = req.session.userID;
+  if (isLoggedIn(cookie, users)) {
+    return res.redirect("/urls");
+  }
   const user = users[req.session.userID];
   const templateVars = {user};
   res.render("urls_login", templateVars);
